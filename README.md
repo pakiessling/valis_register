@@ -105,3 +105,43 @@ pixel coordinates in the moving image to full-resolution pixel coordinates
 in the static Xenium DAPI image. VALIS's own intermediate registration
 artifacts (feature matches, diagnostic overlays, etc.) are written alongside
 it under `out_dir/valis_results/`.
+
+## Running many samples in parallel
+
+Each alignment is single-image and single-process, so batches of samples
+can be fanned out with [GNU parallel](https://www.gnu.org/software/parallel/)
+instead of looping serially. Put one sample per line in a CSV with the
+moving image and DAPI image paths as the first two columns:
+
+```csv
+sample1/he_slide.ome.tif,sample1/morphology_focus_0000.ome.tif
+sample2/if_image.ome.tif,sample2/morphology_focus_0000.ome.tif
+sample3/he_slide.ome.tif,sample3/morphology_focus_0000.ome.tif
+```
+
+(no header row — `parallel` treats every line as a job)
+
+Then run:
+
+```bash
+parallel --joblog run.log --resume --colsep ',' \
+  pixi run python align_to_xenium.py {1} {2} :::: sample.csv
+```
+
+- `--colsep ','` splits each CSV row into `{1}`, `{2}`, ... for substitution
+  into the command.
+- `--joblog run.log` records the exit status of every job.
+- `--resume` (paired with `--joblog`) skips jobs already recorded as
+  successfully completed in `run.log`, so a failed or interrupted batch can
+  be safely re-run without redoing finished alignments.
+
+By default `parallel` runs as many jobs at once as there are CPU cores; pass
+`-j N` to cap concurrency (useful since each job also starts its own JVM for
+Bio-Formats and can be memory-hungry for large slides). If you'd rather keep
+a header row in `sample.csv` for readability, skip it with
+`tail -n +2 sample.csv | parallel --joblog run.log --resume --colsep ',' pixi run python align_to_xenium.py {1} {2}`.
+
+If you need to set a per-sample `out_dir` (the script's third, optional
+argument) rather than relying on the default location next to each moving
+image, add it as a third CSV column and reference it as `{3}` in the
+command.
