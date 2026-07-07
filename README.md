@@ -35,11 +35,8 @@ Java configuration is needed.
 
 ### Option A: pixi (recommended)
 
-1. Install pixi if you don't already have it:
+1. Install pixi if you don't already have it: https://pixi.prefix.dev/latest/installation/
 
-   ```bash
-   curl -fsSL https://pixi.sh/install.sh | sh
-   ```
 
 2. From the project root, install all dependencies (Python, OpenJDK,
    Maven, and the `valis-wsi` package) into a local environment:
