@@ -1,4 +1,4 @@
-# valis_align
+# VALIS register
 
 Rigidly align an H&E or multi-channel immunofluorescence (IF) image to a
 10x Xenium DAPI image using [VALIS](https://github.com/MathOnco/valis), and
