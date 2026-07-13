@@ -37,6 +37,14 @@ if not os.environ.get("JAVA_HOME"):
             ["/usr/libexec/java_home"], capture_output=True, text=True
         ).stdout.strip() or os.path.dirname(os.path.dirname(os.path.realpath(java_bin)))
 
+# VALIS's deep feature detectors (DISK/DeDoDe/SuperPoint) run on the GPU when one
+# is available but then call `.detach().numpy()` on the result without moving it
+# back to host first, which torch rejects for CUDA tensors ("can't convert cuda:0
+# device type tensor to numpy"). Feature detection runs on VALIS's small
+# thumbnails, so hiding the GPU here costs nothing and sidesteps the bug entirely.
+# Must be set before torch is imported (i.e. before the valis import below).
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+
 from valis import registration, slide_io, preprocessing, micro_rigid_registrar, valtils, feature_detectors
 
 # These are all expected, benign noise from VALIS's tiled micro-rigid
