@@ -14,5 +14,7 @@ ipykernel = ">=7.3.0,<8"
 maven = ">=3.9.16,<4"
 
 [pypi-dependencies]
-valis-wsi = ">=1.2.0, <2"
-colour-science = "==0.4.4"
+# Our fork of MathOnco/valis 1.2.0 with GPU/MPS device fixes, the CUDA
+# tensor->numpy .cpu() fixes, the rigid-only cleanup() fix, and a
+# colour-science<0.4.5 pin (which is why the explicit pin below is gone).
+valis-wsi = { git = "https://github.com/pakiessling/valis.git", rev = "030b4a9f5f666c0d6bd8d89df792ab7145be1b64" }
