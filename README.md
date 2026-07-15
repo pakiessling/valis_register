@@ -66,11 +66,11 @@ Run the script through pixi (or with your conda environment activated) so
 it picks up the managed Python/Java environment:
 
 ```bash
-pixi run python align_to_xenium.py <moving_image> <dapi_image> [out_dir] [--channel CHANNEL]
+pixi run python align_to_xenium.py <moving_image> <dapi_image> [out_dir] [--channel CHANNEL] [--localize]
 
 # or, with conda:
 conda activate valis_align
-python align_to_xenium.py <moving_image> <dapi_image> [out_dir] [--channel CHANNEL]
+python align_to_xenium.py <moving_image> <dapi_image> [out_dir] [--channel CHANNEL] [--localize]
 ```
 
 **Arguments:**
@@ -87,6 +87,13 @@ python align_to_xenium.py <moving_image> <dapi_image> [out_dir] [--channel CHANN
 - `--channel CHANNEL` (optional) — exact name of the moving image's
   DAPI/nuclear channel, bypassing autopick. Also forces IF handling even if
   the image would otherwise be detected as brightfield RGB.
+- `--localize` (optional) — enable the small-moving-in-large-static pre-pass
+  (see [below](#aligning-a-small-core-to-a-whole-tma-scan---localize)). Use it
+  when the moving image covers only a small sub-region of the static scan,
+  e.g. a single TMA core vs. a whole-TMA DAPI scan.
+- `--localize-candidates N` (optional, default 3) — with `--localize`, how
+  many candidate locations to fine-register before keeping the best. Higher
+  is more robust to look-alike sibling cores but slower.
 
 **Example:**
 
@@ -95,6 +102,42 @@ pixi run python align_to_xenium.py \
   he_slide.ome.tif \
   xenium_output/morphology_focus/morphology_focus_0000.ome.tif \
   results/
+```
+
+### Aligning a small core to a whole-TMA scan (`--localize`)
+
+By default the moving and static images are assumed to cover roughly the same
+field of view (e.g. serial sections of the same tissue). VALIS scales *each*
+image independently so its longest side is a fixed pixel budget, which only
+makes sense when their physical extents are comparable.
+
+When the moving image is a **small sub-region** of a much larger static
+image — for example a single H&E TMA core (~2 mm) aligned to a whole-slide
+DAPI TMA scan (~1–2 cm, containing dozens of cores) — that assumption breaks:
+the tiny core and the huge scan get squashed to the same pixel size, so the
+core's tissue ends up at a completely different micron/pixel than the same
+tissue inside the scan, surrounded by look-alike sibling cores. Registration
+then fails or locks onto the wrong core.
+
+`--localize` fixes this with a coarse-to-fine pre-pass:
+
+1. Render both images at a **shared micron/pixel** and template-match the
+   moving image's nuclei texture (hematoxylin for H&E, DAPI for IF) against
+   the static scan to locate which core it corresponds to.
+2. Crop the static scan to that core at full resolution.
+3. Run the normal fine registration against the crop (now comparable in
+   extent, so it just works), trying the top few candidate cores and keeping
+   the one with the most feature matches.
+4. Compose the crop offset back in, so the exported transform still maps
+   moving pixels to **full** static-scan pixels — identical output contract to
+   a normal run.
+
+```bash
+pixi run python align_to_xenium.py \
+  core_11-B4.ome.tiff \
+  xenium_output/morphology_focus/morphology_focus_0000.ome.tif \
+  results/ \
+  --localize
 ```
 
 ### Output
